@@ -1,6 +1,7 @@
 import pygame
 import random
 import sys
+from abc import ABC, abstractmethod
 
 # Инициализация Pygame
 pygame.init()
@@ -16,34 +17,11 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 
-# Класс для бойца
-class Fighter:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.weapon = None
-    
-    def change_weapon(self, weapon):
-        self.weapon = weapon
-    
-    def draw(self):
-        pygame.draw.rect(screen, BLACK, (self.x, self.y, 50, 50))
-    
-    def move(self, dx, dy):
-        self.x += dx
-        self.y += dy
-        self.x = max(0, min(SCREEN_WIDTH - 50, self.x))
-        self.y = max(0, min(SCREEN_HEIGHT - 50, self.y))
-    
-    def attack(self):
-        if self.weapon:
-            return self.weapon.attack()
-        return 0
-
 # Абстрактный класс для оружия
-class Weapon:
+class Weapon(ABC):
+    @abstractmethod
     def attack(self):
-        raise NotImplementedError("Метод attack() должен быть определен в подклассах")
+        pass
 
 # Класс для меча
 class Sword(Weapon):
@@ -55,25 +33,58 @@ class Axe(Weapon):
     def attack(self):
         return random.randint(15, 25)
 
-# Класс для монстра
-class Monster:
+# Фабрика для создания оружия
+class WeaponFactory:
+    @staticmethod
+    def create_weapon(weapon_type):
+        if weapon_type == '1':
+            return Sword()
+        elif weapon_type == '2':
+            return Axe()
+        else:
+            raise ValueError("Неверный выбор оружия")
+
+# Класс для управления движением
+class Movement:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.health = 100  # Добавляем здоровье монстру
     
-    def draw(self):
-        pygame.draw.rect(screen, RED, (self.x, self.y, 50, 50))
-    
-    def move(self):
-        self.x += random.randint(-10, 10)
-        self.y += random.randint(-10, 10)
+    def move(self, dx, dy):
+        self.x += dx
+        self.y += dy
         self.x = max(0, min(SCREEN_WIDTH - 50, self.x))
         self.y = max(0, min(SCREEN_HEIGHT - 50, self.y))
     
+    def draw(self, color):
+        pygame.draw.rect(screen, color, (self.x, self.y, 50, 50))
+
+# Класс для бойца
+class Fighter:
+    def __init__(self, movement):
+        self.movement = movement
+        self.weapon = None
+    
+    def change_weapon(self, weapon):
+        self.weapon = weapon
+    
+    def attack(self):
+        if self.weapon:
+            return self.weapon.attack()
+        return 0
+
+# Класс для монстра
+class Monster:
+    def __init__(self, x, y):
+        self.movement = Movement(x, y)
+        self.health = 100
+    
+    def move(self):
+        self.movement.move(random.randint(-10, 10), random.randint(-10, 10))
+    
     def take_damage(self, amount):
         self.health -= amount
-        print(f"Здоровье монстра: {self.health}")  # Печатаем здоровье монстра после атаки
+        print(f"Здоровье монстра: {self.health}")
         if self.health <= 0:
             print("Монстр повержен!")
             pygame.quit()
@@ -82,16 +93,15 @@ class Monster:
 # Основная функция игры
 def main():
     clock = pygame.time.Clock()
-    hero = Fighter(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60)
+    hero_movement = Movement(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60)
+    hero = Fighter(hero_movement)
     monster = Monster(random.randint(0, SCREEN_WIDTH - 50), random.randint(0, SCREEN_HEIGHT - 50))
 
     weapon_choice = input("Выберите оружие: 1 - Меч, 2 - Топор\n")
-    if weapon_choice == '1':
-        hero.change_weapon(Sword())
-    elif weapon_choice == '2':
-        hero.change_weapon(Axe())
-    else:
-        print("Неверный выбор")
+    try:
+        hero.change_weapon(WeaponFactory.create_weapon(weapon_choice))
+    except ValueError as e:
+        print(e)
         sys.exit()
 
     start_game = input("Начинаем? (y/n)\n")
@@ -106,24 +116,24 @@ def main():
         
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
-            hero.move(-5, 0)
+            hero.movement.move(-5, 0)
         if keys[pygame.K_RIGHT]:
-            hero.move(5, 0)
+            hero.movement.move(5, 0)
         if keys[pygame.K_UP]:
-            hero.move(0, -5)
+            hero.movement.move(0, -5)
         if keys[pygame.K_DOWN]:
-            hero.move(0, 5)
-        if keys[pygame.K_SPACE]:  # Атака активируется при нажатии клавиши SPACE
-            if pygame.Rect(hero.x, hero.y, 50, 50).colliderect(pygame.Rect(monster.x, monster.y, 50, 50)):
+            hero.movement.move(0, 5)
+        if keys[pygame.K_RETURN]:
+            if pygame.Rect(hero.movement.x, hero.movement.y, 50, 50).colliderect(pygame.Rect(monster.movement.x, monster.movement.y, 50, 50)):
                 damage = hero.attack()
-                print(f"Герой атакует монстра и наносит {damage} % урона!")
+                print(f"Герой атакует монстра и наносит {damage} урона!")
                 monster.take_damage(damage)
 
         monster.move()
         
         screen.fill(WHITE)
-        hero.draw()
-        monster.draw()
+        hero.movement.draw(BLACK)
+        monster.movement.draw(RED)
         pygame.display.flip()
         clock.tick(30)
 
