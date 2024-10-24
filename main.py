@@ -1,6 +1,5 @@
 import pygame
 import random
-
 import sys
 
 # Инициализация Pygame
@@ -17,59 +16,59 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 
-
 # Класс для бойца
 class Fighter:
     def __init__(self, x, y):
         self.x = x
         self.y = y
         self.weapon = None
-
+    
     def change_weapon(self, weapon):
         self.weapon = weapon
-
+    
     def draw(self):
         pygame.draw.rect(screen, BLACK, (self.x, self.y, 50, 50))
-
+    
+    def move(self, dx, dy):
+        self.x += dx
+        self.y += dy
+        self.x = max(0, min(SCREEN_WIDTH - 50, self.x))
+        self.y = max(0, min(SCREEN_HEIGHT - 50, self.y))
+    
     def attack(self):
         if self.weapon:
             return self.weapon.attack()
         return 0
-
 
 # Абстрактный класс для оружия
 class Weapon:
     def attack(self):
         raise NotImplementedError("Метод attack() должен быть определен в подклассах")
 
-
 # Класс для меча
 class Sword(Weapon):
     def attack(self):
         return random.randint(10, 20)
-
 
 # Класс для топора
 class Axe(Weapon):
     def attack(self):
         return random.randint(15, 25)
 
-
 # Класс для монстра
 class Monster:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-
+    
     def draw(self):
         pygame.draw.rect(screen, RED, (self.x, self.y, 50, 50))
-
+    
     def move(self):
         self.x += random.randint(-10, 10)
         self.y += random.randint(-10, 10)
         self.x = max(0, min(SCREEN_WIDTH - 50, self.x))
         self.y = max(0, min(SCREEN_HEIGHT - 50, self.y))
-
 
 # Основная функция игры
 def main():
@@ -95,34 +94,30 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-
-        screen.fill(WHITE)
-
-        hero.draw()
-        monster.draw()
-
+        
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
-            hero.x -= 5
+            hero.move(-5, 0)
         if keys[pygame.K_RIGHT]:
-            hero.x += 5
+            hero.move(5, 0)
         if keys[pygame.K_UP]:
-            hero.y -= 5
+            hero.move(0, -5)
         if keys[pygame.K_DOWN]:
-            hero.y += 5
-
-        monster.move()
-
+            hero.move(0, 5)
         if keys[pygame.K_SPACE]:
-            damage = hero.attack()
             if pygame.Rect(hero.x, hero.y, 50, 50).colliderect(pygame.Rect(monster.x, monster.y, 50, 50)):
-                print("Герой атакует монстра и наносит", damage, "урона!")
+                damage = hero.attack()
+                print("Герой атакует монстра и наносит", damage, "урон!")
                 pygame.quit()
                 sys.exit()
 
+        monster.move()
+        
+        screen.fill(WHITE)
+        hero.draw()
+        monster.draw()
         pygame.display.flip()
         clock.tick(30)
-
 
 if __name__ == "__main__":
     main()
